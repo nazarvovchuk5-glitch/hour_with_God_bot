@@ -20,6 +20,7 @@ Telegram Bot — відмічає людей, які не поставили + �
 
 import logging
 from datetime import datetime, timedelta
+import os
 
 import pytz
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -34,7 +35,7 @@ from telegram.ext import (
 )
 
 # ── Налаштування ─────────────────────────────────────────────────────────────
-BOT_TOKEN         = "8710025600:AAGkDZQPR3ZgVJVYzQeVerjBLpuqtTQiWvQ"
+BOT_TOKEN = os.environ["BOT_TOKEN"]
 TIMEZONE          = "Europe/Kiev"
 CHECK_HOUR        = 16
 CHECK_MIN         = 0
