@@ -1,10 +1,9 @@
 import json
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time as datetime_time
 
 import pytz
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -22,13 +21,12 @@ CHECK_MIN         = 0
 REMIND_HOUR       = 18
 REMIND_MIN        = 0
 WINDOW_START_HOUR = 18
-CHATS_FILE        = "registered_chats.json"  # файл для збереження чатів
+CHATS_FILE        = "registered_chats.json"
 
 # ── Учасники ──────────────────────────────────────────────────────────────────
 MEMBERS: dict[int, dict] = {
     653369664: {"name": "Міла",         "username": "mlllana"},
     542909091: {"name": "Назар Вовчук", "username": "vovchuk_n"},
-    # додавайте учасників сюди
 }
 
 # ── Логування ─────────────────────────────────────────────────────────────────
@@ -64,17 +62,23 @@ registered_chats: set[int] = load_chats()
 
 def window_bounds() -> tuple[datetime, datetime]:
     now   = datetime.now(tz)
-    end   = now.replace(hour=CHECK_HOUR, minute=CHECK_MIN, second=0, microsecond=0)
-    start = (end - timedelta(days=1)).replace(
-        hour=WINDOW_START_HOUR, minute=0, second=0, microsecond=0
-    )
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    end   = today.replace(hour=CHECK_HOUR, minute=CHECK_MIN)
+    start = (today - timedelta(days=1)).replace(hour=WINDOW_START_HOUR, minute=0)
+
+    # Якщо вже після 16:00 — наступний цикл
+    if now >= end:
+        start = today.replace(hour=WINDOW_START_HOUR, minute=0)
+        end   = (today + timedelta(days=1)).replace(hour=CHECK_HOUR, minute=CHECK_MIN)
+
     return start, end
 
 
 def is_within_window() -> bool:
     now = datetime.now(tz)
     start, end = window_bounds()
-    return start <= now <= end
+    return start <= now < end
 
 
 def user_mention(user_id: int, info: dict) -> str:
@@ -95,27 +99,15 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
 
-    logger.info("Повідомлення '+' від user_id=%d", user_id)
-
     if user_id not in MEMBERS:
         return
 
     if not is_within_window():
         start, end = window_bounds()
-        await msg.reply_text(
-            f"⏰ Реєстрація можлива лише з "
-            f"{start.strftime('%d.%m %H:%M')} до {end.strftime('%d.%m %H:%M')}."
-        )
         return
 
     if chat_id not in checked_in:
         checked_in[chat_id] = set()
-
-    if user_id in checked_in[chat_id]:
-        await msg.reply_text("Ти вже відмітився ✅")
-    else:
-        checked_in[chat_id].add(user_id)
-        await msg.reply_text(f"✅ {update.effective_user.first_name}, відмічено!")
 
 
 # ── Команди ───────────────────────────────────────────────────────────────────
@@ -123,7 +115,7 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
 async def cmd_setchat(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
     registered_chats.add(chat_id)
-    save_chats(registered_chats)  # зберігаємо на диск
+    save_chats(registered_chats)
 
     if chat_id not in checked_in:
         checked_in[chat_id] = set()
@@ -141,15 +133,38 @@ async def cmd_check(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     await run_check(ctx.bot, update.effective_chat.id)
 
 
-# ── Нагадування о 18:00 ───────────────────────────────────────────────────────
+async def cmd_status(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = update.effective_chat.id
+    present = checked_in.get(chat_id, set())
+    absent  = {uid: info for uid, info in MEMBERS.items() if uid not in present}
 
-async def send_reminder(app: Application) -> None:
+    start, end = window_bounds()
+    lines = [f"📊 <b>Статус ({start.strftime('%d.%m %H:%M')} – {end.strftime('%d.%m %H:%M')})</b>\n"]
+
+    if present:
+        lines.append("✅ <b>Відмітились:</b>")
+        for uid in present:
+            if uid in MEMBERS:
+                lines.append(f"  • {user_mention(uid, MEMBERS[uid])}")
+
+    if absent:
+        lines.append("\n❌ <b>Ще не відмітились:</b>")
+        for uid, info in absent.items():
+            lines.append(f"  • {user_mention(uid, info)}")
+
+    await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+
+
+# ── JobQueue колбеки ──────────────────────────────────────────────────────────
+
+async def job_send_reminder(ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """Щодня о 18:00 — скидає стан і надсилає нагадування."""
     for chat_id in list(registered_chats):
         try:
-            checked_in[chat_id] = set()  # скидаємо — починається нове вікно
-            await app.bot.send_message(
+            checked_in[chat_id] = set()
+            await ctx.bot.send_message(
                 chat_id,
-                "🙏 <b>Як ваша година з Богом?</b>\n\nНапишіть <b>+</b> якщо провели час з Богом сьогодні.",
+                "🙏 <b>Як ваша година з Богом?</b>",
                 parse_mode="HTML",
             )
             logger.info("Reminder sent to chat %d", chat_id)
@@ -157,33 +172,33 @@ async def send_reminder(app: Application) -> None:
             logger.error("Error sending reminder to chat %d: %s", chat_id, e)
 
 
-# ── Перевірка явки о 16:00 ────────────────────────────────────────────────────
+async def job_scheduled_check(ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """Щодня о 16:00 — підраховує хто відмітився."""
+    for chat_id in list(registered_chats):
+        try:
+            await run_check(ctx.bot, chat_id)
+            logger.info("Check completed for chat %d", chat_id)
+        except Exception as e:
+            logger.error("Error in scheduled check for chat %d: %s", chat_id, e)
+
 
 async def run_check(bot, chat_id: int) -> None:
     present = checked_in.get(chat_id, set())
     absent  = {uid: info for uid, info in MEMBERS.items() if uid not in present}
 
     if not absent:
-        await bot.send_message(chat_id, "🎉 Всі відмітились! Молодці 👏", parse_mode="HTML")
+        await bot.send_message(chat_id, "🎉 Всі відмітились!", parse_mode="HTML")
     else:
         mentions = "\n".join(
             f"• {user_mention(uid, info)}" for uid, info in absent.items()
         )
         await bot.send_message(
             chat_id,
-            f"❌ <b>Не відмітились:</b>\n{mentions}",
+            f"❌ <b>Як ваша година з Богом?</b>\n{mentions}",
             parse_mode="HTML",
         )
 
     checked_in[chat_id] = set()
-
-
-async def scheduled_check(app: Application) -> None:
-    for chat_id in list(registered_chats):
-        try:
-            await run_check(app.bot, chat_id)
-        except Exception as e:
-            logger.error("Error in chat %d: %s", chat_id, e)
 
 
 # ── Запуск ────────────────────────────────────────────────────────────────────
@@ -193,34 +208,25 @@ def main() -> None:
 
     app.add_handler(CommandHandler("setchat", cmd_setchat))
     app.add_handler(CommandHandler("check",   cmd_check))
+    app.add_handler(CommandHandler("status",  cmd_status))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    scheduler = AsyncIOScheduler(timezone=tz)
-
-    scheduler.add_job(
-        scheduled_check,
-        trigger="cron",
-        hour=CHECK_HOUR,
-        minute=CHECK_MIN,
-        kwargs={"app": app},
+    # Вбудований JobQueue — надійніше за APScheduler
+    app.job_queue.run_daily(
+        job_scheduled_check,
+        time=datetime_time(hour=CHECK_HOUR, minute=CHECK_MIN, tzinfo=tz),
+        name="daily_check",
+    )
+    app.job_queue.run_daily(
+        job_send_reminder,
+        time=datetime_time(hour=REMIND_HOUR, minute=REMIND_MIN, tzinfo=tz),
+        name="daily_reminder",
     )
 
-    scheduler.add_job(
-        send_reminder,
-        trigger="cron",
-        hour=REMIND_HOUR,
-        minute=REMIND_MIN,
-        kwargs={"app": app},
+    logger.info(
+        "Bot started. Loaded %d registered chats. Check at %02d:%02d, Reminder at %02d:%02d",
+        len(registered_chats), CHECK_HOUR, CHECK_MIN, REMIND_HOUR, REMIND_MIN,
     )
-
-    async def post_init(application: Application) -> None:
-        scheduler.start()
-        logger.info("Scheduler started. Check at %02d:%02d, Reminder at %02d:%02d",
-                    CHECK_HOUR, CHECK_MIN, REMIND_HOUR, REMIND_MIN)
-
-    app.post_init = post_init
-
-    logger.info("Bot started. Loaded %d registered chats.", len(registered_chats))
     app.run_polling(drop_pending_updates=True)
 
 
