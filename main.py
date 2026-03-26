@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from datetime import datetime, timedelta, time as datetime_time
+from datetime import datetime, time as datetime_time
 
 import pytz
 from telegram import Update
@@ -60,25 +60,10 @@ registered_chats: set[int] = load_chats()
 
 # ── Допоміжні функції ─────────────────────────────────────────────────────────
 
-def window_bounds() -> tuple[datetime, datetime]:
-    now   = datetime.now(tz)
-    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
-
-    end   = today.replace(hour=CHECK_HOUR, minute=CHECK_MIN)
-    start = (today - timedelta(days=1)).replace(hour=WINDOW_START_HOUR, minute=0)
-
-    # Якщо вже після 16:00 — наступний цикл
-    if now >= end:
-        start = today.replace(hour=WINDOW_START_HOUR, minute=0)
-        end   = (today + timedelta(days=1)).replace(hour=CHECK_HOUR, minute=CHECK_MIN)
-
-    return start, end
-
-
 def is_within_window() -> bool:
-    now = datetime.now(tz)
-    start, end = window_bounds()
-    return start <= now < end
+    """Вікно відкрите з 18:00 до 16:00 наступного дня. Мертва зона: 16:00–18:00."""
+    hour = datetime.now(tz).hour
+    return not (CHECK_HOUR <= hour < WINDOW_START_HOUR)
 
 
 def user_mention(user_id: int, info: dict) -> str:
@@ -103,11 +88,19 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
         return
 
     if not is_within_window():
-        start, end = window_bounds()
+        await msg.reply_text(
+            f"⏰ Реєстрація можлива лише з {WINDOW_START_HOUR:02d}:00 до {CHECK_HOUR:02d}:00."
+        )
         return
 
     if chat_id not in checked_in:
         checked_in[chat_id] = set()
+
+    if user_id in checked_in[chat_id]:
+        await msg.reply_text("Ти вже відмітився ✅")
+    else:
+        checked_in[chat_id].add(user_id)
+        await msg.reply_text(f"✅ {update.effective_user.first_name}, відмічено!")
 
 
 # ── Команди ───────────────────────────────────────────────────────────────────
@@ -138,8 +131,7 @@ async def cmd_status(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     present = checked_in.get(chat_id, set())
     absent  = {uid: info for uid, info in MEMBERS.items() if uid not in present}
 
-    start, end = window_bounds()
-    lines = [f"📊 <b>Статус ({start.strftime('%d.%m %H:%M')} – {end.strftime('%d.%m %H:%M')})</b>\n"]
+    lines = [f"📊 <b>Статус (вікно {WINDOW_START_HOUR:02d}:00 – {CHECK_HOUR:02d}:00)</b>\n"]
 
     if present:
         lines.append("✅ <b>Відмітились:</b>")
@@ -164,7 +156,7 @@ async def job_send_reminder(ctx: ContextTypes.DEFAULT_TYPE) -> None:
             checked_in[chat_id] = set()
             await ctx.bot.send_message(
                 chat_id,
-                "🙏 <b>Як ваша година з Богом?</b>",
+                "🙏 <b>Як ваша година з Богом?</b>\n\nНапишіть <b>+</b> якщо провели час з Богом сьогодні.",
                 parse_mode="HTML",
             )
             logger.info("Reminder sent to chat %d", chat_id)
@@ -187,14 +179,14 @@ async def run_check(bot, chat_id: int) -> None:
     absent  = {uid: info for uid, info in MEMBERS.items() if uid not in present}
 
     if not absent:
-        await bot.send_message(chat_id, "🎉 Всі відмітились!", parse_mode="HTML")
+        await bot.send_message(chat_id, "🎉 Всі відмітились! Молодці 👏", parse_mode="HTML")
     else:
         mentions = "\n".join(
             f"• {user_mention(uid, info)}" for uid, info in absent.items()
         )
         await bot.send_message(
             chat_id,
-            f"❌ <b>Як ваша година з Богом?</b>\n{mentions}",
+            f"❌ <b>Не відмітились:</b>\n{mentions}",
             parse_mode="HTML",
         )
 
