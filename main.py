@@ -96,11 +96,8 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
     if chat_id not in checked_in:
         checked_in[chat_id] = set()
 
-    if user_id in checked_in[chat_id]:
-        await msg.reply_text("Ти вже відмітився ✅")
-    else:
+    if not user_id in checked_in[chat_id]:
         checked_in[chat_id].add(user_id)
-        await msg.reply_text(f"✅ {update.effective_user.first_name}, відмічено!")
 
 
 # ── Команди ───────────────────────────────────────────────────────────────────
