@@ -156,7 +156,7 @@ async def job_send_reminder(ctx: ContextTypes.DEFAULT_TYPE) -> None:
             checked_in[chat_id] = set()
             await ctx.bot.send_message(
                 chat_id,
-                "🙏 <b>Як ваша година з Богом?</b>\n\nНапишіть <b>+</b> якщо провели час з Богом сьогодні.",
+                "🙏 <b>Як ваша година з Богом?</b>",
                 parse_mode="HTML",
             )
             logger.info("Reminder sent to chat %d", chat_id)
@@ -186,7 +186,7 @@ async def run_check(bot, chat_id: int) -> None:
         )
         await bot.send_message(
             chat_id,
-            f"❌ <b>Не відмітились:</b>\n{mentions}",
+            f"❌ <b>Як ваша година з Богом?:</b>\n{mentions}",
             parse_mode="HTML",
         )
 
