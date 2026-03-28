@@ -15,7 +15,7 @@ from telegram.ext import (
 
 # ── Налаштування ─────────────────────────────────────────────────────────────
 BOT_TOKEN         = os.environ.get("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
-CHAT_ID           = int(os.environ.get("CHAT_ID", 0))  # ID групи
+CHAT_ID           = int(os.environ.get("CHAT_ID", -5164276463))  # ID групи
 TIMEZONE          = "Europe/Kiev"
 CHECK_HOUR        = 16
 CHECK_MIN         = 0
