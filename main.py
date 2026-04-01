@@ -99,18 +99,10 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
         return
 
     if not is_within_window():
-        start, end = window_bounds()
-        await msg.reply_text(
-            f"⏰ Реєстрація можлива лише з "
-            f"{start.strftime('%d.%m %H:%M')} до {end.strftime('%d.%m %H:%M')}."
-        )
         return
 
-    if user_id in checked_in:
-        await msg.reply_text("Ти вже відмітився ✅")
-    else:
+    if not user_id in checked_in:
         checked_in.add(user_id)
-        await msg.reply_text(f"✅ {update.effective_user.first_name}, відмічено!")
 
 
 # ── Команда /check ────────────────────────────────────────────────────────────
