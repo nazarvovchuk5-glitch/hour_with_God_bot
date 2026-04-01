@@ -15,7 +15,7 @@ from telegram.ext import (
 
 # ── Налаштування ─────────────────────────────────────────────────────────────
 BOT_TOKEN         = os.environ.get("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
-CHAT_ID           = int(os.environ.get("CHAT_ID", -5164276463))  # ID групи
+CHAT_ID           = int(os.environ.get("CHAT_ID", -1003753828565))  # ID групи
 TIMEZONE          = "Europe/Kiev"
 CHECK_HOUR        = 16
 CHECK_MIN         = 0
@@ -25,9 +25,26 @@ WINDOW_START_HOUR = 18
 
 # ── Учасники ──────────────────────────────────────────────────────────────────
 MEMBERS: dict[int, dict] = {
-    653369664: {"name": "Міла",         "username": "mlllana"},
     542909091: {"name": "Назар Вовчук", "username": "vovchuk_n"},
-    # додавайте учасників сюди
+    600916975: {"name": "Віталік Шегда", "username": "v_shehda"},
+    683631390: {"name": "Павло Скіцко", "username": "pavlo_skitsko"},
+    410711173: {"name": "Павло Веляник", "username": "poulVel"},
+    439061132: {"name": "Володя Веляник", "username": "sound_volodya"},
+    1313242876: {"name": "Тереза Федорук", "username": "Defkanvi"},
+    1270762844: {"name": "Діана Паркулаб", "username": "di_parker1"},
+    554304091: {"name": "Діана Черняк", "username": "cherniak_diana"},
+    426703270: {"name": "Юра Чигур", "username": "yurii_chygur"},
+    1032761760: {"name": "Надія Пушкар", "username": "Nadiya_psh"},
+    1113982047: {"name": "Христя", "username": "kristparl"},
+    1039513473: {"name": "Влад Гайдей", "username": "vladislav_gaydey"},
+    531725686 : {"name": "Каріна Пуйда", "username": "karina_puida"},
+    6332427398 : {"name": "Влад Севостьянов", "username": "JohnDeer102"},
+    761640440 : {"name": "Настя Чигур", "username": "chygurkaa"},
+    380071501 : {"name": "Юра Бурчак", "username": "burchak1"},
+    1496062214 : {"name": "Тимофій Строіч", "username": "t_stroich"},
+    627457986 : {"name": "Марко Черняк", "username": "cherniak_marko"},
+    393415671 : {"name": "Юля Бурчак", "username": "jburchak"},
+    1182319849 : {"name": "Влад Жмудовський"},
 }
 
 # ── Логування ─────────────────────────────────────────────────────────────────
@@ -131,7 +148,10 @@ async def run_check(bot) -> None:
         )
         await bot.send_message(
             CHAT_ID,
-            f"❌ <b>Не відмітились:</b>\n{mentions}",
+            f"❌ <b>А ви провели годину з Богом?:</b>\n{mentions}"
+            f"\n\n<b>Якщо ні, то ось номер карти, скиньте 200 грн штрафу</b>\n"
+            f"<b>5375 4112 1882 3420</b>\n"
+            f'<a href="https://send.monobank.ua/jar/Zc7jQS4v7">💳 Посилання моно</a>',
             parse_mode="HTML",
         )
 
