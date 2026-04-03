@@ -114,8 +114,6 @@ async def cmd_check(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 # ── Нагадування о 18:00 ───────────────────────────────────────────────────────
 
 async def send_reminder(app: Application) -> None:
-    global checked_in
-    checked_in = set()  # скидаємо — починається нове вікно
     try:
         await app.bot.send_message(
             CHAT_ID,
