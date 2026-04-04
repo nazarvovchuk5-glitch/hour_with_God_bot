@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, time as datetime_time
 
 import pytz
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -15,7 +15,7 @@ from telegram.ext import (
 
 # ── Налаштування ─────────────────────────────────────────────────────────────
 BOT_TOKEN         = os.environ.get("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
-CHAT_ID           = int(os.environ.get("CHAT_ID", -1003753828565))  # ID групи
+CHAT_ID           = int(os.environ.get("CHAT_ID", -1003753828565))
 TIMEZONE          = "Europe/Kiev"
 CHECK_HOUR        = 16
 CHECK_MIN         = 0
@@ -25,26 +25,27 @@ WINDOW_START_HOUR = 18
 
 # ── Учасники ──────────────────────────────────────────────────────────────────
 MEMBERS: dict[int, dict] = {
-    542909091: {"name": "Назар Вовчук", "username": "vovchuk_n"},
-    600916975: {"name": "Віталік Шегда", "username": "v_shehda"},
-    683631390: {"name": "Павло Скіцко", "username": "pavlo_skitsko"},
-    410711173: {"name": "Павло Веляник", "username": "poulVel"},
-    439061132: {"name": "Володя Веляник", "username": "sound_volodya"},
-    1313242876: {"name": "Тереза Федорук", "username": "Defkanvi"},
-    1270762844: {"name": "Діана Паркулаб", "username": "di_parker1"},
-    554304091: {"name": "Діана Черняк", "username": "cherniak_diana"},
-    426703270: {"name": "Юра Чигур", "username": "yurii_chygur"},
-    1032761760: {"name": "Надія Пушкар", "username": "Nadiya_psh"},
-    1113982047: {"name": "Христя", "username": "kristparl"},
-    1039513473: {"name": "Влад Гайдей", "username": "vladislav_gaydey"},
-    531725686 : {"name": "Каріна Пуйда", "username": "karina_puida"},
-    6332427398 : {"name": "Влад Севостьянов", "username": "JohnDeer102"},
-    761640440 : {"name": "Настя Чигур", "username": "chygurkaa"},
-    380071501 : {"name": "Юра Бурчак", "username": "burchak1"},
-    1496062214 : {"name": "Тимофій Строіч", "username": "t_stroich"},
-    627457986 : {"name": "Марко Черняк", "username": "cherniak_marko"},
-    393415671 : {"name": "Юля Бурчак", "username": "jburchak"},
-    1182319849 : {"name": "Влад Жмудовський"},
+    542909091:  {"name": "Назар Вовчук",     "username": "vovchuk_n",        "checked": False},
+    600916975:  {"name": "Віталік Шегда",    "username": "v_shehda",         "checked": False},
+    683631390:  {"name": "Павло Скіцко",     "username": "pavlo_skitsko",    "checked": False},
+    410711173:  {"name": "Павло Веляник",    "username": "poulVel",          "checked": False},
+    439061132:  {"name": "Володя Веляник",   "username": "sound_volodya",    "checked": False},
+    1313242876: {"name": "Тереза Федорук",   "username": "Defkanvi",         "checked": False},
+    1270762844: {"name": "Діана Паркулаб",   "username": "di_parker1",       "checked": False},
+    554304091:  {"name": "Діана Черняк",     "username": "cherniak_diana",   "checked": False},
+    426703270:  {"name": "Юра Чигур",        "username": "yurii_chygur",     "checked": False},
+    1032761760: {"name": "Надія Пушкар",     "username": "Nadiya_psh",       "checked": False},
+    1113982047: {"name": "Христя",           "username": "kristparl",        "checked": False},
+    1039513473: {"name": "Влад Гайдей",      "username": "vladislav_gaydey", "checked": False},
+    531725686:  {"name": "Каріна Пуйда",     "username": "karina_puida",     "checked": False},
+    6332427398: {"name": "Влад Севостьянов", "username": "JohnDeer102",      "checked": False},
+    761640440:  {"name": "Настя Чигур",      "username": "chygurkaa",        "checked": False},
+    380071501:  {"name": "Юра Бурчак",       "username": "burchak1",         "checked": False},
+    1496062214: {"name": "Тимофій Строіч",   "username": "t_stroich",        "checked": False},
+    627457986:  {"name": "Марко Черняк",     "username": "cherniak_marko",   "checked": False},
+    393415671:  {"name": "Юля Бурчак",       "username": "jburchak",         "checked": False},
+    1182319849: {"name": "Влад Жмудовський",                                 "checked": False},
+    788031811: {"name": "Андрій Мельничук",  "username": "@melnichhuk",      "checked": False},
 }
 
 # ── Логування ─────────────────────────────────────────────────────────────────
@@ -54,27 +55,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ── Стан ─────────────────────────────────────────────────────────────────────
-checked_in: set[int] = set()  # set of user_id які поставили + у поточному вікні
-
 tz = pytz.timezone(TIMEZONE)
 
 
 # ── Допоміжні функції ─────────────────────────────────────────────────────────
 
-def window_bounds() -> tuple[datetime, datetime]:
-    now   = datetime.now(tz)
-    end   = now.replace(hour=CHECK_HOUR, minute=CHECK_MIN, second=0, microsecond=0)
-    start = (end - timedelta(days=1)).replace(
-        hour=WINDOW_START_HOUR, minute=0, second=0, microsecond=0
-    )
-    return start, end
-
-
 def is_within_window() -> bool:
-    now = datetime.now(tz)
-    start, end = window_bounds()
-    return start <= now <= end
+    """Вікно відкрите з 18:00 до 16:00. Мертва зона: 16:00–18:00."""
+    hour = datetime.now(tz).hour
+    return not (CHECK_HOUR <= hour < WINDOW_START_HOUR)
+
+
+def reset_all() -> None:
+    """Скидає checked = False для всіх учасників."""
+    for info in MEMBERS.values():
+        info["checked"] = False
 
 
 def user_mention(user_id: int, info: dict) -> str:
@@ -98,22 +93,44 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
     if user_id not in MEMBERS:
         return
 
-    if not is_within_window():
-        return
+    if MEMBERS[user_id]["checked"]:
+        await msg.reply_text("Ти вже відмітився ✅")
+    else:
+        MEMBERS[user_id]["checked"] = True
+        logger.info("User %d відмічено.", user_id)
+        await msg.reply_text(f"✅ {update.effective_user.first_name}, відмічено!")
 
-    if not user_id in checked_in:
-        checked_in.add(user_id)
 
-
-# ── Команда /check ────────────────────────────────────────────────────────────
+# ── Команди ───────────────────────────────────────────────────────────────────
 
 async def cmd_check(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     await run_check(ctx.bot)
 
 
+async def cmd_status(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показує хто вже відмітився без закриття циклу."""
+    present = {uid: info for uid, info in MEMBERS.items() if info["checked"]}
+    absent  = {uid: info for uid, info in MEMBERS.items() if not info["checked"]}
+
+    lines = [f"📊 <b>Статус (вікно {WINDOW_START_HOUR:02d}:00 – {CHECK_HOUR:02d}:00)</b>\n"]
+
+    if present:
+        lines.append("✅ <b>Відмітились:</b>")
+        for uid, info in present.items():
+            lines.append(f"  • {user_mention(uid, info)}")
+
+    if absent:
+        lines.append("\n❌ <b>Ще не відмітились:</b>")
+        for uid, info in absent.items():
+            lines.append(f"  • {user_mention(uid, info)}")
+
+    await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+
+
 # ── Нагадування о 18:00 ───────────────────────────────────────────────────────
 
 async def send_reminder(app: Application) -> None:
+    reset_all()  # скидаємо всі checked → False
     try:
         await app.bot.send_message(
             CHAT_ID,
@@ -128,7 +145,8 @@ async def send_reminder(app: Application) -> None:
 # ── Перевірка явки о 16:00 ────────────────────────────────────────────────────
 
 async def run_check(bot) -> None:
-    absent = {uid: info for uid, info in MEMBERS.items() if uid not in checked_in}
+    absent = {uid: info for uid, info in MEMBERS.items() if not info["checked"]}
+    logger.info("run_check: absent=%d", len(absent))
 
     if not absent:
         await bot.send_message(CHAT_ID, "🎉 Всі відмітились! Молодці 👏", parse_mode="HTML")
@@ -145,9 +163,6 @@ async def run_check(bot) -> None:
             parse_mode="HTML",
         )
 
-    global checked_in
-    checked_in = set()
-
 
 async def scheduled_check(app: Application) -> None:
     logger.info("Running scheduled check for chat %d", CHAT_ID)
@@ -160,19 +175,17 @@ async def scheduled_check(app: Application) -> None:
 # ── Запуск ────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    if not CHAT_ID:
-        raise ValueError("CHAT_ID не встановлено! Додайте змінну середовища CHAT_ID.")
-
     app = Application.builder().token(BOT_TOKEN).build()
 
-    app.add_handler(CommandHandler("check", cmd_check))
+    app.add_handler(CommandHandler("check",  cmd_check))
+    app.add_handler(CommandHandler("status", cmd_status))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     scheduler = AsyncIOScheduler(timezone=tz)
 
     scheduler.add_job(
         scheduled_check,
-        id="daily_check",
+        id="scheduled_check",
         trigger="cron",
         hour=CHECK_HOUR,
         minute=CHECK_MIN,
@@ -181,7 +194,7 @@ def main() -> None:
 
     scheduler.add_job(
         send_reminder,
-        id="daily_reminder",
+        id="send_reminder",
         trigger="cron",
         hour=REMIND_HOUR,
         minute=REMIND_MIN,
@@ -196,7 +209,6 @@ def main() -> None:
         )
 
     app.post_init = post_init
-
     app.run_polling(drop_pending_updates=True)
 
 
