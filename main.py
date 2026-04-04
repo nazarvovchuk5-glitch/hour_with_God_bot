@@ -96,7 +96,6 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
     if not MEMBERS[user_id]["checked"]:
         MEMBERS[user_id]["checked"] = True
         logger.info("User %d відмічено.", user_id)
-        await msg.reply_text(f"✅ {update.effective_user.first_name}, відмічено!")
 
 
 # ── Команди ───────────────────────────────────────────────────────────────────
