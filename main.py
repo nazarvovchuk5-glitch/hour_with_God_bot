@@ -45,7 +45,7 @@ MEMBERS: dict[int, dict] = {
     627457986:  {"name": "Марко Черняк",     "username": "cherniak_marko",   "checked": False},
     393415671:  {"name": "Юля Бурчак",       "username": "jburchak",         "checked": False},
     1182319849: {"name": "Влад Жмудовський",                                 "checked": False},
-    788031811: {"name": "Андрій Мельничук",  "username": "@melnichhuk",      "checked": False},
+    788031811: {"name": "Андрій Мельничук",  "username": "melnichhuk",      "checked": False},
 }
 
 # ── Логування ─────────────────────────────────────────────────────────────────
@@ -93,9 +93,7 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
     if user_id not in MEMBERS:
         return
 
-    if MEMBERS[user_id]["checked"]:
-        await msg.reply_text("Ти вже відмітився ✅")
-    else:
+    if not MEMBERS[user_id]["checked"]:
         MEMBERS[user_id]["checked"] = True
         logger.info("User %d відмічено.", user_id)
         await msg.reply_text(f"✅ {update.effective_user.first_name}, відмічено!")
