@@ -46,6 +46,7 @@ MEMBERS: dict[int, dict] = {
     393415671:  {"name": "Юля Бурчак",       "username": "jburchak",         "checked": False},
     1182319849: {"name": "Влад Жмудовський",                                 "checked": False},
     788031811: {"name": "Андрій Мельничук",  "username": "melnichhuk",      "checked": False},
+    788031811: {"name": "Софія Черняк",  "username": "sofia_cherniak",      "checked": False},
 }
 
 # ── Логування ─────────────────────────────────────────────────────────────────
