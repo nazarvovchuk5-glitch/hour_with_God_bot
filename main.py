@@ -30,14 +30,12 @@ MEMBERS: dict[int, dict] = {
     683631390:  {"name": "Павло Скіцко",     "username": "pavlo_skitsko",    "checked": False},
     410711173:  {"name": "Павло Веляник",    "username": "poulVel",          "checked": False},
     439061132:  {"name": "Володя Веляник",   "username": "sound_volodya",    "checked": False},
-    1313242876: {"name": "Тереза Федорук",   "username": "Defkanvi",         "checked": False},
     1270762844: {"name": "Діана Паркулаб",   "username": "di_parker1",       "checked": False},
     554304091:  {"name": "Діана Черняк",     "username": "cherniak_diana",   "checked": False},
     426703270:  {"name": "Юра Чигур",        "username": "yurii_chygur",     "checked": False},
     1032761760: {"name": "Надія Пушкар",     "username": "Nadiya_psh",       "checked": False},
     1113982047: {"name": "Христя",           "username": "kristparl",        "checked": False},
     1039513473: {"name": "Влад Гайдей",      "username": "vladislav_gaydey", "checked": False},
-    531725686:  {"name": "Каріна Пуйда",     "username": "karina_puida",     "checked": False},
     6332427398: {"name": "Влад Севостьянов", "username": "JohnDeer102",      "checked": False},
     761640440:  {"name": "Настя Чигур",      "username": "chygurkaa",        "checked": False},
     380071501:  {"name": "Юра Бурчак",       "username": "burchak1",         "checked": False},
@@ -47,6 +45,9 @@ MEMBERS: dict[int, dict] = {
     1182319849: {"name": "Влад Жмудовський",                                 "checked": False},
     788031811: {"name": "Андрій Мельничук",  "username": "melnichhuk",      "checked": False},
     1748252683: {"name": "Софія Черняк",  "username": "sofia_cherniak",      "checked": False},
+    596160194: {"name": "Катя Ракочий",  "username": "rakochyy_k",         "checked": False},
+    381870793: {"name": "Остап Величко",  "username": "@car_manenko",      "checked": False},
+    2006663432: {"name": "Максим Олійник",                                "checked": False},
 }
 
 # ── Логування ─────────────────────────────────────────────────────────────────
